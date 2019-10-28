@@ -1,0 +1,85 @@
+import json
+from pathlib import Path
+
+import pgdb
+import pytest
+import pytest_check as check
+import testing.postgresql
+import pandas as pd
+from sqlalchemy import create_engine
+
+TEST_ROOT = Path(__file__).resolve().parent
+CONNECTION, engine, psql = None, None, None
+total_test_cases = 0
+
+
+def fake_postgres():
+    global CONNECTION, engine, psql
+    psql = testing.postgresql.Postgresql()
+    info = psql.dsn()
+    CONNECTION = pgdb.connect(user=info['user'], host=info['host'], database=info['database'], port=info['port'])
+    engine = create_engine(psql.url())
+
+
+def disconnect_fake_postgres():
+    global psql, CONNECTION
+    psql = psql.stop()
+    CONNECTION.close()
+
+
+def rollback_connection():
+    CONNECTION.rollback()
+
+
+def load_data_and_connect():
+    global total_test_cases
+    fake_postgres()
+
+    path = TEST_ROOT / "data"
+    files = sorted(Path.glob(path, "postgres*.csv"))
+
+    tests = []
+    for file in files:
+        tests.append(pd.read_csv(str(file), index_col=0))
+
+    with open(str(path / 'postgres_test_ground_truth.json'), 'r') as infile:
+        ground_truth = json.load(infile)
+
+    total_test_cases = len(tests)
+    test_case_ids = list(range(total_test_cases))
+    return list(zip(tests, ground_truth, test_case_ids))
+
+
+def sum_ages():
+    records = query_database(operation="""SELECT age FROM students""")
+    ages = [r.age for r in records]
+    return sum(ages)
+
+
+def query_database(operation):
+    cursor = CONNECTION.cursor()
+    records = cursor.execute(operation).fetchall()
+    cursor.close()
+    return records
+
+
+def create_table(students_df):
+    students_df.to_sql('students', engine, if_exists='replace')
+
+
+@pytest.mark.parametrize('students_df, ground_truth_sum, test_case_ids', load_data_and_connect())
+def test_sum_ages(students_df, ground_truth_sum, test_case_ids):
+    global total_test_cases
+    create_table(students_df)
+    # assert ground_truth_sum == sum_ages()
+    check.equal(ground_truth_sum, sum_ages())
+    if test_case_ids < total_test_cases - 1:
+        rollback_connection()
+    else:
+        disconnect_fake_postgres()
+
+
+if __name__ == '__main__':
+    data = load_data_and_connect()
+    test_sum_ages(data[0][0], data[0][1])
+    pass
