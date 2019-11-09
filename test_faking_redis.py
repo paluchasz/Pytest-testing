@@ -44,14 +44,16 @@ def sum_redis_key_values(rc, key_format):
 
 
 @pytest.mark.parametrize('values, result', load_data_and_connect())
-def test_sum_1(values, result):
+def test_sum_keys(values, result):
     global rc, redis_key_format
     create_redis_data(rc, redis_key_format, values)
-    assert sum_redis_key_values(rc, redis_key_format) == result
+    redis_keys_sum = sum_redis_key_values(rc, redis_key_format)
     delete_redis_keys(rc, redis_key_format)
+    assert redis_keys_sum == result
 
 
 if __name__ == '__main__':
     tests = load_data_and_connect()
-    test_sum_1(tests[0][0], tests[0][1])
+    for test in tests:
+        test_sum_keys(test[0], test[1])
     pass
