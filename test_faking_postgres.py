@@ -31,17 +31,14 @@ def rollback_connection():
     CONNECTION.rollback()
 
 
-def load_data_and_connect():
+def load_data():
     global total_test_cases
-    fake_postgres()
-
     path = TEST_ROOT / "data"
     files = sorted(Path.glob(path, "postgres*.csv"))
 
     tests = []
     for file in files:
         tests.append(pd.read_csv(str(file), index_col=0))
-
     with open(str(path / 'postgres_test_ground_truth.json'), 'r') as infile:
         ground_truth = json.load(infile)
 
@@ -67,12 +64,14 @@ def create_table(students_df):
     students_df.to_sql('students', engine, if_exists='replace')
 
 
-@pytest.mark.parametrize('students_df, ground_truth_sum, test_case_ids', load_data_and_connect())
-def test_sum_ages(students_df, ground_truth_sum, test_case_ids):
+@pytest.mark.parametrize('students_df, ground_truth_sum, test_case_id', load_data())
+def test_sum_ages(students_df, ground_truth_sum, test_case_id):
     global total_test_cases
+    if test_case_id == 0:
+        fake_postgres()
     create_table(students_df)
     ages_sum = sum_ages()
-    if test_case_ids < total_test_cases - 1:
+    if test_case_id < total_test_cases - 1:
         rollback_connection()
     else:
         disconnect_fake_postgres()
@@ -80,6 +79,6 @@ def test_sum_ages(students_df, ground_truth_sum, test_case_ids):
 
 
 if __name__ == '__main__':
-    data = load_data_and_connect()
-    test_sum_ages(data[0][0], data[0][1])
+    data = load_data()
+    test_sum_ages(data[0][0], data[0][1], 0)
     pass
