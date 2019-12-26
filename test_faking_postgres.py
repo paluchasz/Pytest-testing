@@ -71,12 +71,12 @@ def create_table(students_df):
 def test_sum_ages(students_df, ground_truth_sum, test_case_ids):
     global total_test_cases
     create_table(students_df)
-    # assert ground_truth_sum == sum_ages()
-    check.equal(ground_truth_sum, sum_ages())
+    ages_sum = sum_ages()
     if test_case_ids < total_test_cases - 1:
         rollback_connection()
     else:
         disconnect_fake_postgres()
+    assert ground_truth_sum == ages_sum
 
 
 if __name__ == '__main__':
