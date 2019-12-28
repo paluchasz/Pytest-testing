@@ -38,7 +38,7 @@ def load_data():
 
     tests = []
     for file in files:
-        tests.append(pd.read_csv(str(file), index_col=0))
+        tests.append(pd.read_csv(str(file)))
     with open(str(path / 'postgres_test_ground_truth.json'), 'r') as infile:
         ground_truth = json.load(infile)
 

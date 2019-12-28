@@ -27,7 +27,7 @@ def create_postgres_data():
     for i, test in enumerate(tests):
         with open("/home/paluchasz/Dropbox/programming/pytest_examples/data/postgres_table" + str(i) + ".csv",
                   "w") as file:
-            pd.DataFrame(test).to_csv(file)
+            pd.DataFrame(test).to_csv(file, index=False)
 
     age_sums = [sum(row['age'] for row in test) for test in tests]
     with open("/home/paluchasz/Dropbox/programming/pytest_examples/data/postgres_test_ground_truth.json",
